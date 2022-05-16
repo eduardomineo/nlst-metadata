@@ -122,7 +122,7 @@ COUNT(*)|
 
 
 # Manifest file example
-In order to download DICOM files, you need to create a Manifest file and import it using [NBIA Data Retriever](https://wiki.cancerimagingarchive.net/display/NBIA/Downloading+TCIA+Images). The Manifest structure is demonstrated below. Replace the list of ListOfSeriesToDownload with a list of `series_uid` from your SQL result.
+In order to download DICOM files, you need to create a Manifest file and import it using [NBIA Data Retriever](https://wiki.cancerimagingarchive.net/display/NBIA/Downloading+TCIA+Images). The Manifest structure is demonstrated below. Replace ListOfSeriesToDownload content with a list of `series_uid` from your SQL result.
 
 ```
 downloadServerUrl=https://nlst.cancerimagingarchive.net/nbia-download/servlet/DownloadServlet
