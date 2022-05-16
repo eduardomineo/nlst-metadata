@@ -1,236 +1,160 @@
-# NLST Metadata
-# 
-# eduardomineo@gmail.com
-# INCOR/FMUSP, Brazil
-# 2022
-#
-# build.py: Build the Relational Database
-#
-import os
-import json
-import traceback
+# National Lung Screening Trial
+NLST is a dataset of low-dose chest CT DICOM images and its metadata. Further information about the dataset can be found at [National Lung Screening Trial Public Access](https://wiki.cancerimagingarchive.net/display/NLST/National+Lung+Screening+Trial).
 
-from glob import glob
-from tqdm import tqdm
+# This project
+NLST dataset is a powerful tool for medical image researchers since it comprehends a wide range of patients, institutions, acquisition parameters and equipments. In order to download DICOM images with [NBIA Data Retriever](https://wiki.cancerimagingarchive.net/display/NBIA/Downloading+TCIA+Images), a manifest file containing study identifiers must be created. This can be achieved using the [NBIA search website](https://nlst.cancerimagingarchive.net/nbia-search/) whether through its simple search or its text search. However, researchers may find challenging defining their cohorts with more complex criteria such as numerical comparisons (for instance, studies with slice thickness greater than 2mm) or grouping conditions (for instance, studies with more than 2 series) or more ad-hoc selection (for instance, only one study per patient ordered by number of images).
 
-import sqlite3 as sl
+This project provides a Python 3 script to create a local relational database (SQLite DB) from downloaded NLST DICOM Metadata. Once the database is created, researchers can use any SQLite client ([DBeaver](https://dbeaver.io/download/), for instance) to execute SQL queries.
 
-DB_PATH='db/nlst.db'
+Metadata was downloaded according to the following criteria:
 
-#
-#
-def create_tables(conn):
-    conn.execute('''
-        CREATE TABLE SERIES (
-            series_id INTEGER NOT NULL PRIMARY KEY,
-            series_uid TEXT,
-            series_number TEXT,
-            series_description TEXT,
-            series_number_images INTEGER,
-            series_modality TEXT,
-            series_manufacturer TEXT,
-            series_model TEXT,
-            series_annotations_flag BOOLEAN,
-            series_annotations_size INTEGER,
-            series_total_size INTEGER,
-            series_project TEXT,
-            series_data_provenance TEXT,
-            series_software_version TEXT,
-            series_max_frame_count INTEGER,
-            series_body_part TEXT,
-            series_third_party_analysis TEXT,
-            series_description_uri TEXT,
-            series_sop_class_uid TEXT,
-            series_license_name TEXT,
-            series_license_url TEXT,
-            series_commercial_restrictions BOOLEAN,
-            series_exact_size INTEGER,
-            series_screening_year INTEGER,
-            series_image_type TEXT,
-            series_convolution_kernel TEXT,
-            series_reconstruction_diameter REAL,
-            series_slice_thickness REAL,
-            series_kvp REAL,
-            series_mas REAL,
-            series_effective_mas REAL,
-            series_pitch REAL,
+* Collection: NLST
+* Image modality: CT
+* Anatomical site: CHEST
+* Exclude Phantoms
+* Exclude 3rd-Party Results
+* Exclude collections with commercial use restrictions
 
-            patient_id INTEGER,
-            patient_subject_id INTEGER,
 
-            study_id INTEGER,
-            study_uid TEXT,
-            study_date INTEGER,
-            study_description TEXT,
-            study_exclude_commercial TEXT
-        );
-    ''')
-    conn.execute('''
-        CREATE INDEX idx_pat_id ON SERIES(patient_id);
-    ''')
-    conn.execute('''
-        CREATE INDEX idx_std_id ON SERIES(study_id);
-    ''')
+* Total subjects: 25,970
+* Total studies: 70,817
+* Total series: 194,309
+* Total images (count only): 20,266,972
 
-#
-#
-def insert_series(conn, patient, study, seriesList):
-    query = '''
-            INSERT INTO SERIES(
-                series_id,
-                series_uid,
-                series_number,
-                series_description,
-                series_number_images,
-                series_modality,
-                series_manufacturer,
-                series_model,
-                series_annotations_flag,
-                series_annotations_size,
-                series_total_size,
-                series_project,
-                series_data_provenance,
-                series_software_version,
-                series_max_frame_count,
-                series_body_part,
-                series_third_party_analysis,
-                series_description_uri,
-                series_sop_class_uid,
-                series_license_name,
-                series_license_url,
-                series_commercial_restrictions,
-                series_exact_size,
-                series_screening_year,
-                series_image_type,
-                series_convolution_kernel,
-                series_reconstruction_diameter,
-                series_slice_thickness,
-                series_kvp,
-                series_mas,
-                series_effective_mas,
-                series_pitch,
-                patient_id,
-                patient_subject_id,
-                study_id,
-                study_uid,
-                study_date,
-                study_description,
-                study_exclude_commercial
-            )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    '''
 
-    data = []
+# Data structure
 
-    for series in seriesList:
-        additional_values = series['description'].split(',')
-        while len(additional_values) < 11:
-            additional_values.append('null')
+Table: **SERIES**
+|Column                         | Data Type | Modifiers            |
+|:------------------------------|:----------|:---------------------|
+|series_id                      | INTEGER   | NOT NULL PRIMARY KEY |
+|series_uid                     | TEXT      |                      |
+|series_number                  | TEXT      |                      |
+|series_description             | TEXT      |                      |
+|series_number_images           | INTEGER   |                      |
+|series_modality                | TEXT      |                      |
+|series_manufacturer            | TEXT      |                      |
+|series_model                   | TEXT      |                      |
+|series_annotations_flag        | BOOLEAN   |                      |
+|series_annotations_size        | INTEGER   |                      |
+|series_total_size              | INTEGER   |                      |
+|series_project                 | TEXT      |                      |
+|series_data_provenance         | TEXT      |                      |
+|series_software_version        | TEXT      |                      |
+|series_max_frame_count         | INTEGER   |                      |
+|series_body_part               | TEXT      |                      |
+|series_third_party_analysis    | TEXT      |                      |
+|series_description_uri         | TEXT      |                      |
+|series_sop_class_uid           | TEXT      |                      |
+|series_license_name            | TEXT      |                      |
+|series_license_url             | TEXT      |                      |
+|series_commercial_restrictions | BOOLEAN   |                      |
+|series_exact_size              | INTEGER   |                      |
+|series_screening_year          | INTEGER   |                      |
+|series_image_type              | TEXT      |                      |
+|series_convolution_kernel      | TEXT      |                      |
+|series_reconstruction_diameter | REAL      |                      |
+|series_slice_thickness         | REAL      |                      |
+|series_kvp                     | REAL      |                      |
+|series_mas                     | REAL      |                      |
+|series_effective_mas           | REAL      |                      |
+|series_pitch                   | REAL      |                      |
+|patient_id                     | INTEGER   |                      |
+|patient_subject_id             | INTEGER   |                      |
+|study_id                       | INTEGER   |                      |
+|study_uid                      | TEXT      |                      |
+|study_date                     | INTEGER   |                      |
+|study_description              | TEXT      |                      |
 
-        data.append((
-            series['seriesPkId'],
-            series['seriesUID'],
-            series['seriesNumber'],
-            series['description'],
-            series['numberImages'],
-            series['modality'],
-            series['manufacturer'],
-            series['manufacturerModelName'],
-            series['annotationsFlag'],
-            series['annotationsSize'],
-            series['totalSizeForAllImagesInSeries'],
-            series['project'],
-            series['dataProvenanceSiteName'],
-            series['softwareVersion'],
-            series['maxFrameCount'],
-            series['bodyPartExamined'],
-            series['thirdPartyAnalysis'],
-            series['descriptionURI'],
-            series['sopClassUID'],
-            series['licenseName'],
-            series['licenseUrl'],
-            series['commercialRestrictions'],
-            series['exactSize'],
-            additional_values[0],
-            additional_values[1],
-            additional_values[4],
-            strToFloat(additional_values[5]),
-            strToFloat(additional_values[6]),
-            strToFloat(additional_values[7]),
-            strToFloat(additional_values[8]),
-            strToFloat(additional_values[9]),
-            strToFloat(additional_values[10]),
 
-            patient['id'],
-            patient['subjectId'],
 
-            study['id'],
-            study['studyId'],
-            study['date'],
-            study['description'],
-            study['excludeCommercial']
-        ))
+# Usage
 
-    conn.executemany(query, data)
+```
+$ git clone git@github.com:eduardomineo/nlst-metadata.git
+$ python build.py
+NLST metadata database builder
 
-def strToFloat(s):
-    try:
-        return float(s)
-    except:
-        return None
+Database created on db/nlst.db
+```
 
-#
-#
-def import_files(conn):
-    patient_files = glob('./patient/*.json')
+Once the database is created, you can connect to it and execute SQL queries.
 
-    for patient_file in tqdm(patient_files):
-        basename = os.path.basename(patient_file)
-        result_id = os.path.splitext(basename)[0]
+```
+SELECT COUNT(DISTINCT PATIENT_ID) FROM SERIES;
+***
+COUNT(DISTINCT PATIENT_ID)|
+--------------------------+
+                     25970|
+```
 
-        f = open(patient_file, 'r')
-        result_set  = json.load(f)['resultSet']
+```
+SELECT COUNT(DISTINCT STUDY_ID) FROM SERIES;
+***
+COUNT(DISTINCT STUDY_ID)|
+------------------------+
+                   70817|
+```
 
-        for patient in result_set:
-            subject_id = patient['subjectId']
-            for study_ident in patient['studyIdentifiers']:
-                study_identifier = study_ident['studyIdentifier']
+```
+SELECT COUNT() FROM SERIES;
+***
+COUNT()|
+-------+
+ 194309|
+```
 
-                study_file = os.path.join('studies', result_id, subject_id, f'{study_identifier}.json')
+```
+SELECT SUM(series_number_images) FROM SERIES;
+***
+SUM(series_number_images)|
+-------------------------+
+                 20266972|
+```
 
-                s = open(study_file, 'r')
-                study = json.load(s)
+```
+SELECT COUNT(*) FROM SERIES WHERE series_slice_thickness >= 2 and series_slice_thickness  <= 3
+***
+COUNT(*)|
+--------+
+  100948|
+```
 
-                if len(study) > 1:
-                    raise Exception(f'{study_file} contains {len(study)}')
 
-                study = study[0]
+# Manifest file example
+In order to download DICOM files, you need to create a Manifest file and import it using [NBIA Data Retriever](https://wiki.cancerimagingarchive.net/display/NBIA/Downloading+TCIA+Images). The Manifest structure is demonstrated below. Replace the list of ListOfSeriesToDownload with a list of `series_uid` from your SQL result.
 
-                insert_series(conn, patient, study, study['seriesList'])
+```
+downloadServerUrl=https://nlst.cancerimagingarchive.net/nbia-download/servlet/DownloadServlet
+includeAnnotation=true
+noOfrRetry=4
+databasketId=manifest.tcia
+manifestVersion=3.0
+ListOfSeriesToDownload=
+1.2.840.113654.2.55.229650531101716203536241646069123704792
+1.2.840.113654.2.55.257926562693607663865369179341285235858
+1.2.840.113654.2.55.21461438679308812574178613217680405233
+1.2.840.113654.2.55.283399418711252976131557177419186072875
+1.2.840.113654.2.55.107058971791399096468046631579934786083
+1.2.840.113654.2.55.122344168497038128022524906545138736420
+1.2.840.113654.2.55.97114726565566537928831413367474015470
+```
 
-#
-#
-def main():
-    print('NLST metadata database builder')
-    print()
 
-    try:
-        db_dirname = os.path.dirname(DB_PATH)
-        if not os.path.exists(db_dirname):
-            os.makedirs(db_dirname)
+# Citations & Data Usage Policy
 
-        if os.path.exists(DB_PATH):
-            raise Exception(f'Database file {DB_PATH} already exists')
+Users of this data must abide by the [TCIA Data Usage Policy](https://wiki.cancerimagingarchive.net/x/c4hF) and the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/) under which it has been published. Attribution should include references to the following citations:
 
-        with sl.connect(DB_PATH) as conn:
-            create_tables(conn)
-            import_files(conn)
+> **Dataset Citation**
+>
+> National Lung Screening Trial Research Team. (2013). **Data from the National Lung Screening Trial (NLST) [Data set]**. The Cancer Imaging Archive. [https://doi.org/10.7937/TCIA.HMQ8-J677](https://doi.org/10.7937/TCIA.HMQ8-J677)
 
-        print(f'Database created on {DB_PATH}')
-    except Exception:
-        print(traceback.format_exc())
+> **Publication Citation**
+>
+> National Lung Screening Trial Research Team*; Aberle DR, Adams AM, Berg CD, Black WC, Clapp JD, Fagerstrom RM, Gareen IF, Gatsonis C, Marcus PM, Sicks JD (2011). **Reduced Lung-Cancer Mortality with Low-Dose Computed Tomographic Screening**. New England Journal of Medicine, 365(5), 395–409. [https://doi.org/10.1056/nejmoa1102873](https://doi.org/10.1056/nejmoa1102873)
+>
+> *note:  [List of National Lung Screening Trial members (pages 1-31 of this supplemental PDF to this article](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4356534/bin/NIHMS320819-supplement-Supplement1.pdf)
 
-#
-# Program entry-point
-if __name__ == '__main__':
-    main()
+> **TCIA Citation**
+>
+> Clark K, Vendt B, Smith K, Freymann J, Kirby J, Koppel P, Moore S, Phillips S, Maffitt D, Pringle M, Tarbox L, Prior F. The Cancer Imaging Archive (TCIA): Maintaining and Operating a Public Information Repository, Journal of Digital Imaging, Volume 26, Number 6, December, 2013, pp 1045-1057. DOI: [https://doi.org/10.1007/s10278-013-9622-7](https://doi.org/10.1007/s10278-013-9622-7)
