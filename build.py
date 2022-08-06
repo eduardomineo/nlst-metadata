@@ -127,6 +127,10 @@ def insert_series(conn, patient, study, seriesList):
         while len(additional_values) < 11:
             additional_values.append('null')
 
+        modelName = series['manufacturerModelName'];
+        if modelName is None:
+            modelName = additional_values[3]
+
         data.append((
             series['seriesPkId'],
             series['seriesUID'],
@@ -135,7 +139,7 @@ def insert_series(conn, patient, study, seriesList):
             series['numberImages'],
             series['modality'],
             series['manufacturer'],
-            series['manufacturerModelName'],
+            modelName,
             series['annotationsFlag'],
             series['annotationsSize'],
             series['totalSizeForAllImagesInSeries'],
